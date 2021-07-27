@@ -1,0 +1,75 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: Sample template to provision an EC2 Instance for public subnet in AZ 2.
+Mappings:
+  AmiMap:
+    ServerType01:
+      id: ami-00399ec92321828f5
+
+Parameters:
+  Scenario2AStackName:
+    Description: Name of Scenario 2-A stack
+    Type: String
+    Default: Scenario-2-A
+
+  Scenario1BStackName:
+    Description: Name of Scenario 1-B stack
+    Type: String
+    Default: Scenario-1-B
+
+  KeyPairName:
+    Description: EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: EC2TestCF
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+
+Resources:
+  PublicEC2Instance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType:
+        Ref: InstanceType
+      KeyName:
+        Ref: KeyPairName
+      ImageId:
+        Fn::FindInMap:
+        - AmiMap
+        - ServerType01
+        - id
+      BlockDeviceMappings:
+      - DeviceName: /dev/sda1
+        Ebs:
+          DeleteOnTermination: true
+          VolumeSize: 8
+          VolumeType: gp2
+      NetworkInterfaces:
+      - AssociatePublicIpAddress: true
+        DeleteOnTermination: true
+        Description: Public EC2 instance network interface
+        DeviceIndex: '0'
+        SubnetId:
+          Fn::ImportValue:
+            Fn::Sub: "${Scenario2AStackName}-PublicSubnet2ID"
+        GroupSet:
+        - Fn::ImportValue:
+            Fn::Sub: "${Scenario1BStackName}-PublicSGID"
+      Tags:
+      - Key: Name
+        Value: Public-Scenario-2-EC2
+      - Key: Application
+        Value:
+          Ref: AWS::StackName
+
+Outputs:
+  PublicEC2Instance2:
+    Description: Scenario 2 Public EC2 ID
+    Value:
+      Ref: PublicEC2Instance2
+    Export:
+      Name:
+        Fn::Sub: "${AWS::StackName}-PublicEC2ID2"
+
